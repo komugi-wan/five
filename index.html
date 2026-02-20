@@ -1,580 +1,851 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Minimalist Thread Cards Pro</title>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <style>
-        :root {
-            --bg-color: #F2F2F7;
-            --card-bg: #FFFFFF;
-            --primary-text: #1C1C1E;
-            --secondary-text: #8E8E93;
-            --accent-color: #007AFF;
-            --shadow: 0 4px 12px rgba(0,0,0,0.08);
-            --radius: 16px;
-            --tag-bg: #E5E5EA;
-            --border-color: #EEEEEE;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Dusty Note - カード型メモアプリ</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--primary-text);
-            margin: 0;
-            padding: 20px 10px 100px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+  <style>
+    /* ==========================================================================
+       1. CSS Variables & Theme (テーマ設定・くすみピンク)
+       ========================================================================== */
+    :root {
+      /* Theme Colors */
+      --color-primary: #D1B3B9;       /* くすみピンク */
+      --color-primary-dark: #B5939A;  /* やや濃いくすみピンク */
+      --color-primary-light: #F2E9EA; /* 薄いくすみピンク（背景アクセント） */
+      --color-bg: #FAF8F8;            /* アプリのベース背景色 */
+      --color-surface: #FFFFFF;       /* カードなどの表面色 */
+      --color-text-main: #4A4546;     /* メインテキスト（真っ黒を避けて視認性向上） */
+      --color-text-sub: #8C8486;      /* サブテキスト */
+      --color-border: #E8DFE1;        /* 境界線 */
+      
+      /* Typography */
+      --font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+      
+      /* UI Specs */
+      --border-radius-lg: 16px;
+      --border-radius-md: 12px;
+      --border-radius-sm: 8px;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+      
+      /* Spacing & Layout */
+      --safe-area-top: env(safe-area-inset-top, 0px);
+      --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+      --header-height: 60px;
+    }
 
-        h1 { font-size: 24px; font-weight: 700; margin-bottom: 20px; width: 100%; max-width: 500px; padding: 0 10px; }
+    /* ==========================================================================
+       2. Reset & Base Styles
+       ========================================================================== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: var(--font-family);
+      background-color: var(--color-bg);
+      color: var(--color-text-main);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden; /* ビューのスクロールは内部で制御 */
+      user-select: none; /* スマホでの不要なテキスト選択を防止 */
+    }
 
-        #memo-container {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            width: 100%;
-            max-width: 500px;
-        }
+    input, textarea, button {
+      font-family: inherit;
+      color: inherit;
+      border: none;
+      outline: none;
+      background: none;
+      user-select: auto;
+    }
 
-        /* カードの基本スタイル */
-        .card {
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            padding: 16px;
-            height: 160px;
-            box-shadow: var(--shadow);
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.2s;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-        .card:active { transform: scale(0.96); }
+    /* ==========================================================================
+       3. Layout & Views (SPA風の画面切り替え)
+       ========================================================================== */
+    #app-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
 
-        .card-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .card-preview {
-            font-size: 13px;
-            color: var(--secondary-text);
-            line-height: 1.4;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            flex-grow: 1;
-        }
+    .view {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--color-bg);
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      z-index: 1;
+    }
 
-        .thread-count {
-            font-size: 10px;
-            color: var(--accent-color);
-            background: rgba(0, 122, 255, 0.1);
-            padding: 2px 6px;
-            border-radius: 10px;
-            margin-left: 5px;
-            vertical-align: middle;
-        }
+    .view.active {
+      transform: translateX(0);
+      z-index: 10;
+    }
 
-        .card-tags {
-            margin-top: 8px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            height: 18px;
-            overflow: hidden;
-        }
-        .tag-mini {
-            font-size: 10px;
-            background: var(--tag-bg);
-            color: var(--secondary-text);
-            padding: 1px 6px;
-            border-radius: 4px;
-            white-space: nowrap;
-        }
+    .header {
+      padding: calc(var(--safe-area-top) + 12px) 16px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: var(--color-bg);
+      border-bottom: 1px solid var(--color-border);
+      height: calc(var(--header-height) + var(--safe-area-top));
+      flex-shrink: 0;
+    }
 
-        .sortable-ghost { opacity: 0.3; transform: scale(1.02); }
+    .header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--color-primary-dark);
+    }
 
-        /* エディタ（オーバーレイ） */
-        #editor-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: white;
-            z-index: 1000;
-            display: none;
-            flex-direction: column;
-            overflow-y: auto;
-        }
+    .scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      padding-bottom: calc(var(--safe-area-bottom) + 80px); /* FAB用の余白 */
+    }
 
-        .editor-header {
-            position: fixed;
-            top: 0; left: 0; width: 100%;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255,255,255,0.9);
-            backdrop-filter: blur(10px);
-            z-index: 1001;
-            border-bottom: 1px solid var(--border-color);
-        }
+    /* ==========================================================================
+       4. Components (Tags, Cards, Buttons, Editor)
+       ========================================================================== */
+    /* Tags Container (Horizontal Scroll) */
+    .tags-bar {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      overflow-x: auto;
+      background-color: var(--color-bg);
+      border-bottom: 1px solid var(--color-border);
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .tags-bar::-webkit-scrollbar { display: none; }
 
-        .editor-content-inner {
-            padding: 80px 20px 40px;
-            max-width: 600px;
-            margin: 0 auto;
-            width: 100%;
-        }
+    .tag-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      background-color: var(--color-surface);
+      border: 1px solid var(--color-border);
+      font-size: 13px;
+      color: var(--color-text-sub);
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tag-chip.active {
+      background-color: var(--color-primary);
+      color: white;
+      border-color: var(--color-primary);
+    }
 
-        .btn-done { color: var(--accent-color); font-weight: 600; font-size: 17px; border: none; background: none; cursor: pointer; }
-        .btn-delete { color: #FF3B30; font-size: 14px; border: none; background: none; cursor: pointer; }
+    /* Memo Grid (Home) */
+    .memo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      grid-auto-rows: minmax(160px, auto); 
+    }
 
-        #edit-title {
-            font-size: 24px;
-            font-weight: 700;
-            border: none;
-            outline: none;
-            margin-bottom: 10px;
-            width: 100%;
-        }
+    /* Memo Card */
+    .card {
+      background-color: var(--color-surface);
+      border-radius: var(--border-radius-md);
+      padding: 14px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      transition: box-shadow 0.2s;
+      position: relative;
+    }
+    .card:active { box-shadow: none; transform: scale(0.98); }
+    
+    .card-title {
+      font-size: 15px;
+      font-weight: bold;
+      margin-bottom: 6px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    
+    .card-content {
+      font-size: 13px;
+      color: var(--color-text-sub);
+      line-height: 1.5;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
 
-        .edit-tag-section {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 20px;
-            align-items: center;
-        }
-        .tag-chip {
-            background: var(--tag-bg);
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        .tag-chip::after { content: " ×"; opacity: 0.5; }
-        #tag-input { border: none; outline: none; font-size: 14px; padding: 4px 0; min-width: 100px; flex-grow: 1; }
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+    }
 
-        #edit-content {
-            font-size: 17px;
-            border: none;
-            outline: none;
-            resize: none;
-            line-height: 1.6;
-            width: 100%;
-            min-height: 120px;
-            margin-bottom: 30px;
-        }
+    .card-tags {
+      font-size: 11px;
+      color: var(--color-primary-dark);
+      background-color: var(--color-primary-light);
+      padding: 2px 6px;
+      border-radius: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 70%;
+    }
 
-        /* スレッドセクション */
-        .thread-divider {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--secondary-text);
-            margin: 20px 0 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .thread-divider::after { content: ""; flex-grow: 1; height: 1px; background: var(--border-color); }
+    .thread-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--color-text-sub);
+    }
 
-        #thread-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            border-left: 2px solid var(--tag-bg);
-            margin-left: 5px;
-            padding-left: 15px;
-        }
+    /* Editor Card (Thread View) */
+    .editor-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
 
-        /* スレッド内の子メモカード */
-        .sub-card {
-            background: #F9F9FB;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 12px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .sub-card.editing {
-            background: white;
-            border-color: var(--accent-color);
-            box-shadow: var(--shadow);
-        }
-        .sub-card-title {
-            font-weight: 600;
-            font-size: 15px;
-            margin-bottom: 4px;
-        }
-        .sub-card-preview {
-            font-size: 14px;
-            color: var(--secondary-text);
-            white-space: pre-wrap;
-        }
+    .editor-card {
+      background-color: var(--color-surface);
+      border-radius: var(--border-radius-md);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    /* スレッド連結の視覚的表現 */
+    .editor-card:not(:first-child)::before {
+      content: '';
+      position: absolute;
+      top: -16px;
+      left: 32px;
+      width: 2px;
+      height: 16px;
+      background-color: var(--color-primary);
+    }
 
-        .sub-edit-area {
-            display: none;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .sub-card.editing .sub-display-area { display: none; }
-        .sub-card.editing .sub-edit-area { display: flex; }
+    /* 折りたたみ用スタイル */
+    .editor-card.collapsed {
+      padding: 12px 16px;
+    }
+    .editor-card.collapsed .editor-full-view { display: none; }
+    .editor-card:not(.collapsed) .editor-collapsed-view { display: none; }
 
-        .sub-input-title {
-            font-weight: 600;
-            font-size: 15px;
-            border: none;
-            outline: none;
-            background: transparent;
-        }
-        .sub-textarea {
-            width: 100%;
-            border: none;
-            outline: none;
-            font-size: 14px;
-            line-height: 1.5;
-            resize: none;
-            background: transparent;
-        }
+    .collapsed-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .collapsed-title { font-weight: bold; font-size: 15px; color: var(--color-text-main); }
+    .collapsed-text { font-size: 12px; color: var(--color-text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .btn-reply {
-            margin: 20px 0;
-            background: var(--bg-color);
-            border: 1px dashed var(--secondary-text);
-            padding: 15px;
-            border-radius: 12px;
-            text-align: center;
-            color: var(--secondary-text);
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-        }
+    .editor-input {
+      width: 100%;
+      background: transparent;
+      margin-bottom: 8px;
+    }
+    .editor-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--color-text-main);
+      padding-right: 30px; /* アイコン用 */
+    }
+    .editor-title::placeholder { color: #ccc; }
+    
+    .editor-content {
+      font-size: 15px;
+      line-height: 1.6;
+      resize: none;
+      min-height: 80px;
+    }
+    
+    .editor-tags-input {
+      font-size: 13px;
+      color: var(--color-primary-dark);
+      border-top: 1px dashed var(--color-border);
+      padding-top: 8px;
+    }
 
-        .fab {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            background: var(--accent-color);
-            border-radius: 30px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-size: 30px;
-            box-shadow: 0 8px 24px rgba(0,122,255,0.3);
-            cursor: pointer;
-            z-index: 900;
-        }
-    </style>
+    .editor-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .btn-delete {
+      color: #ff6b6b;
+      font-size: 12px;
+      padding: 4px 8px;
+    }
+
+    .btn-toggle-view {
+      padding: 4px;
+      color: var(--color-text-sub);
+      cursor: pointer;
+    }
+
+    /* Floating Action Button */
+    .fab {
+      position: absolute;
+      bottom: calc(var(--safe-area-bottom) + 24px);
+      right: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 28px;
+      background-color: var(--color-primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-md);
+      cursor: pointer;
+      z-index: 100;
+      transition: transform 0.2s;
+    }
+    .fab:active { transform: scale(0.9); }
+
+    .btn-icon {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .btn-icon:active { background-color: rgba(0,0,0,0.05); }
+
+    /* Utilities */
+    .sortable-ghost { opacity: 0.4; }
+    .sortable-drag { background-color: var(--color-primary-light); cursor: grabbing !important; }
+    .drag-handle { padding: 8px; margin: -8px; color: var(--color-border); }
+
+  </style>
 </head>
 <body>
 
-    <h1>Memos</h1>
-    <div id="memo-container"></div>
+  <div id="app-container">
+    
+    <div id="view-home" class="view active">
+      <header class="header">
+        <h1>Dusty Note</h1>
+      </header>
+      
+      <div class="tags-bar" id="home-tags-bar"></div>
 
-    <div class="fab" onclick="createNewMemo()">＋</div>
+      <div class="scroll-area">
+        <div class="memo-grid" id="home-memo-grid"></div>
+      </div>
 
-    <div id="editor-overlay">
-        <div class="editor-header">
-            <button class="btn-delete" onclick="deleteMemo()">削除</button>
-            <button class="btn-done" onclick="closeEditor()">完了</button>
-        </div>
-        <div class="editor-content-inner">
-            <input type="text" id="edit-title" placeholder="タイトル">
-            
-            <div class="edit-tag-section" id="tag-area">
-                <input type="text" id="tag-input" placeholder="タグを追加...">
-            </div>
-
-            <textarea id="edit-content" placeholder="ここに入力..."></textarea>
-
-            <div class="thread-divider">THREADS</div>
-            <div id="thread-list"></div>
-            <div class="btn-reply" onclick="addReplyBlock()">＋ 続きを書く</div>
-        </div>
+      <button class="fab" id="btn-add-memo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
     </div>
 
-    <script>
-        const DB_NAME = 'MemoAppDB_Thread_V2';
-        const DB_VERSION = 1;
-        const STORE_NAME = 'memos';
-        let db;
-        let memos = [];
-        let currentEditId = null;
-        let currentTags = [];
+    <div id="view-thread" class="view">
+      <header class="header">
+        <button class="btn-icon" id="btn-back">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-main)" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <h1 style="font-size: 16px;">スレッド編集</h1>
+        <div style="width: 40px;"></div>
+      </header>
 
-        const container = document.getElementById('memo-container');
-        const tagInput = document.getElementById('tag-input');
-        const tagArea = document.getElementById('tag-area');
-        const threadList = document.getElementById('thread-list');
+      <div class="scroll-area" id="thread-scroll-area">
+        <div class="editor-list" id="thread-editor-list"></div>
+        
+        <button class="fab" id="btn-add-thread" style="background-color: var(--color-primary-dark);">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+    </div>
 
-        function initDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-                request.onupgradeneeded = (e) => {
-                    db = e.target.result;
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-                    }
-                };
-                request.onsuccess = (e) => {
-                    db = e.target.result;
-                    resolve();
-                };
-                request.onerror = (e) => reject(e.target.error);
-            });
-        }
+  </div>
 
-        async function loadMemos() {
-            return new Promise((resolve) => {
-                const transaction = db.transaction([STORE_NAME], 'readonly');
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result);
-            });
-        }
+  <script>
+    /**
+     * ==========================================================================
+     * 1. Data Layer (IndexedDB Wrapper)
+     * ==========================================================================
+     */
+    class MemoDatabase {
+      constructor() {
+        this.dbName = 'DustyNoteDB';
+        this.dbVersion = 1;
+        this.storeName = 'memos';
+        this.db = null;
+      }
 
-        async function saveToDB() {
-            return new Promise((resolve) => {
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                const store = transaction.objectStore(STORE_NAME);
-                store.clear();
-                memos.forEach(memo => store.add(memo));
-                transaction.oncomplete = () => resolve();
-            });
-        }
-
-        async function render() {
-            container.innerHTML = '';
-            // 親メモのみを表示（parentIdがないもの）
-            const rootMemos = memos.filter(m => !m.parentId);
-            
-            rootMemos.forEach(memo => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.dataset.id = memo.id;
-                
-                const replyCount = memos.filter(m => m.parentId === memo.id).length;
-                const threadBadge = replyCount > 0 ? `<span class="thread-count">${replyCount}</span>` : '';
-                const tagsHtml = (memo.tags || []).map(t => `<span class="tag-mini">${t}</span>`).join('');
-
-                card.innerHTML = `
-                    <div class="card-title">${memo.title || '無題'}${threadBadge}</div>
-                    <div class="card-preview">${memo.content || 'テキストなし'}</div>
-                    <div class="card-tags">${tagsHtml}</div>
-                `;
-                card.onclick = () => openEditor(memo.id);
-                container.appendChild(card);
-            });
-            await saveToDB();
-        }
-
-        // メインコンテナのソート設定
-        new Sortable(container, {
-            animation: 150,
-            ghostClass: 'sortable-ghost',
-            delay: 200,
-            delayOnTouchOnly: true,
-            onEnd: async () => {
-                const currentOrderIds = Array.from(container.children).map(c => Number(c.dataset.id));
-                const nonRootMemos = memos.filter(m => m.parentId);
-                const sortedRoots = currentOrderIds.map(id => memos.find(m => m.id === id));
-                memos = [...sortedRoots, ...nonRootMemos];
-                await saveToDB();
+      async init() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(this.dbName, this.dbVersion);
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(this.storeName)) {
+              const store = db.createObjectStore(this.storeName, { keyPath: 'id' });
+              store.createIndex('parentId', 'parentId', { unique: false });
+              store.createIndex('order', 'order', { unique: false });
             }
+          };
+          request.onsuccess = (event) => {
+            this.db = event.target.result;
+            resolve();
+          };
+          request.onerror = (event) => reject(event.target.error);
         });
+      }
 
-        // 子メモ（スレッド）のソート設定
-        new Sortable(threadList, {
-            animation: 150,
-            ghostClass: 'sortable-ghost',
-            handle: '.sub-card',
-            delay: 200,
-            delayOnTouchOnly: true,
-            onEnd: () => {
-                // 並び替え後にmemos配列内の順番を更新
-                const currentOrderIds = Array.from(threadList.children).map(c => Number(c.dataset.id));
-                const otherMemos = memos.filter(m => !currentOrderIds.includes(m.id));
-                const sortedChildren = currentOrderIds.map(id => memos.find(m => m.id === id));
-                memos = [...otherMemos, ...sortedChildren];
-            }
+      async getAll() {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction([this.storeName], 'readonly');
+          const store = transaction.objectStore(this.storeName);
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
         });
+      }
 
-        function openEditor(id) {
-            currentEditId = id;
-            const memo = memos.find(m => m.id === id);
-            if(!memo) return;
+      async save(memo) {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction([this.storeName], 'readwrite');
+          const store = transaction.objectStore(this.storeName);
+          memo.updatedAt = Date.now();
+          const request = store.put(memo);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
 
-            document.getElementById('edit-title').value = memo.title || '';
-            document.getElementById('edit-content').value = memo.content || '';
-            currentTags = [...(memo.tags || [])];
-            renderTags();
-            
-            renderThreadInline(id);
-            
-            document.getElementById('editor-overlay').style.display = 'flex';
-            document.getElementById('editor-overlay').scrollTop = 0;
-        }
+      async delete(id) {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction([this.storeName], 'readwrite');
+          const store = transaction.objectStore(this.storeName);
+          const request = store.delete(id);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
 
-        function renderThreadInline(rootId) {
-            threadList.innerHTML = '';
-            const children = memos.filter(m => m.parentId === rootId);
-            children.forEach(child => {
-                createReplyElement(child);
-            });
-        }
-
-        function createReplyElement(child) {
-            const card = document.createElement('div');
-            card.className = 'sub-card';
-            card.dataset.id = child.id;
-            
-            card.innerHTML = `
-                <div class="sub-display-area">
-                    <div class="sub-card-title">${child.title || '（無題の追記）'}</div>
-                    <div class="sub-card-preview">${child.content || '内容を入力...'}</div>
-                </div>
-                <div class="sub-edit-area">
-                    <input type="text" class="sub-input-title" placeholder="追記タイトル" value="${child.title || ''}">
-                    <textarea class="sub-textarea" placeholder="続きを入力...">${child.content || ''}</textarea>
-                </div>
-            `;
-
-            const textarea = card.querySelector('.sub-textarea');
-            const titleInput = card.querySelector('.sub-input-title');
-
-            // タップで編集モード
-            card.onclick = (e) => {
-                if (card.classList.contains('editing')) return;
-                card.classList.add('editing');
-                textarea.style.height = 'auto';
-                textarea.style.height = textarea.scrollHeight + 'px';
-                textarea.focus();
-            };
-
-            // テキストエリアの自動リサイズ
-            textarea.oninput = () => {
-                textarea.style.height = 'auto';
-                textarea.style.height = textarea.scrollHeight + 'px';
-            };
-
-            // 入力時に即時保存
-            const updateChild = () => {
-                const m = memos.find(item => item.id === child.id);
-                if (m) {
-                    m.title = titleInput.value;
-                    m.content = textarea.value;
-                    card.querySelector('.sub-card-title').textContent = m.title || '（無題の追記）';
-                    card.querySelector('.sub-card-preview').textContent = m.content || '内容を入力...';
-                }
-            };
-            textarea.onblur = () => { card.classList.remove('editing'); updateChild(); };
-            titleInput.onblur = updateChild;
-
-            threadList.appendChild(card);
-        }
-
-        function renderTags() {
-            const chips = tagArea.querySelectorAll('.tag-chip');
-            chips.forEach(c => c.remove());
-            currentTags.forEach((tag, index) => {
-                const span = document.createElement('span');
-                span.className = 'tag-chip';
-                span.textContent = tag;
-                span.onclick = () => {
-                    currentTags.splice(index, 1);
-                    renderTags();
-                };
-                tagArea.insertBefore(span, tagInput);
-            });
-        }
-
-        tagInput.onkeydown = (e) => {
-            if (e.key === 'Enter' && tagInput.value.trim() !== '') {
-                const newTag = tagInput.value.trim();
-                if (!currentTags.includes(newTag)) {
-                    currentTags.push(newTag);
-                    renderTags();
-                }
-                tagInput.value = '';
-                e.preventDefault();
-            } else if (e.key === 'Backspace' && tagInput.value === '' && currentTags.length > 0) {
-                currentTags.pop();
-                renderTags();
+      async updateOrders(orderUpdates) {
+        const transaction = this.db.transaction([this.storeName], 'readwrite');
+        const store = transaction.objectStore(this.storeName);
+        orderUpdates.forEach(update => {
+          const getReq = store.get(update.id);
+          getReq.onsuccess = () => {
+            const data = getReq.result;
+            if (data) {
+              data.order = update.order;
+              store.put(data);
             }
+          };
+        });
+        return new Promise((resolve) => {
+          transaction.oncomplete = () => resolve();
+        });
+      }
+    }
+
+    /**
+     * ==========================================================================
+     * 2. Application State & Logic
+     * ==========================================================================
+     */
+    class AppLogic {
+      constructor(db) {
+        this.db = db;
+        this.memos = [];
+        this.currentTagFilter = null;
+        this.currentParentId = null;
+      }
+
+      async loadData() {
+        this.memos = await this.db.getAll();
+        this.memos.sort((a, b) => a.order - b.order || b.createdAt - a.createdAt);
+      }
+
+      createMemoObject(parentId = null) {
+        return {
+          id: 'memo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+          parentId: parentId,
+          title: '',
+          content: '',
+          tags: [],
+          order: Date.now(),
+          createdAt: Date.now(),
+          updatedAt: Date.now()
         };
+      }
 
-        function saveCurrentState() {
-            const memo = memos.find(m => m.id === currentEditId);
-            if(memo) {
-                memo.title = document.getElementById('edit-title').value;
-                memo.content = document.getElementById('edit-content').value;
-                memo.tags = [...currentTags];
+      getHomeMemos() {
+        let parents = this.memos.filter(m => m.parentId === null);
+        if (this.currentTagFilter) {
+          parents = parents.filter(m => m.tags.includes(this.currentTagFilter));
+        }
+        return parents;
+      }
+
+      getThreadMemos(parentId) {
+        const parent = this.memos.find(m => m.id === parentId);
+        const children = this.memos.filter(m => m.parentId === parentId);
+        children.sort((a, b) => a.order - b.order || a.createdAt - b.createdAt);
+        return parent ? [parent, ...children] : [];
+      }
+
+      getThreadCount(parentId) {
+        return this.memos.filter(m => m.parentId === parentId).length;
+      }
+
+      getAllTags() {
+        const tagSet = new Set();
+        this.memos.filter(m => m.parentId === null).forEach(m => {
+          m.tags.forEach(t => tagSet.add(t));
+        });
+        return Array.from(tagSet).sort();
+      }
+
+      async saveMemo(memoData) {
+        await this.db.save(memoData);
+        await this.loadData();
+      }
+
+      async deleteMemoAndThread(id) {
+        const children = this.memos.filter(m => m.parentId === id);
+        for (const child of children) {
+          await this.db.delete(child.id);
+        }
+        await this.db.delete(id);
+        await this.loadData();
+      }
+    }
+
+    /**
+     * ==========================================================================
+     * 3. UI Manager
+     * ==========================================================================
+     */
+    class UIManager {
+      constructor(appLogic) {
+        this.app = appLogic;
+        
+        this.viewHome = document.getElementById('view-home');
+        this.viewThread = document.getElementById('view-thread');
+        this.memoGrid = document.getElementById('home-memo-grid');
+        this.tagsBar = document.getElementById('home-tags-bar');
+        this.editorList = document.getElementById('thread-editor-list');
+        
+        this.homeSortable = null;
+        this.threadSortable = null;
+
+        this.initEventListeners();
+      }
+
+      initEventListeners() {
+        document.getElementById('btn-add-memo').addEventListener('click', () => this.createNewMemoAndOpen());
+        document.getElementById('btn-back').addEventListener('click', () => this.navigate('home'));
+        document.getElementById('btn-add-thread').addEventListener('click', () => this.createNewThreadMemo());
+        this.saveTimeout = null;
+      }
+
+      navigate(viewName) {
+        if (viewName === 'home') {
+          this.viewThread.classList.remove('active');
+          this.viewHome.classList.add('active');
+          this.app.currentParentId = null;
+          this.renderHome();
+        } else if (viewName === 'thread') {
+          this.viewHome.classList.remove('active');
+          this.viewThread.classList.add('active');
+          this.renderThread();
+        }
+      }
+
+      renderHome() {
+        this.renderTags();
+        this.renderGrid();
+        this.initHomeSortable();
+      }
+
+      renderTags() {
+        const tags = this.app.getAllTags();
+        this.tagsBar.innerHTML = '';
+        
+        const allChip = document.createElement('div');
+        allChip.className = `tag-chip ${this.app.currentTagFilter === null ? 'active' : ''}`;
+        allChip.textContent = 'すべて';
+        allChip.addEventListener('click', () => {
+          this.app.currentTagFilter = null;
+          this.renderHome();
+        });
+        this.tagsBar.appendChild(allChip);
+
+        tags.forEach(tag => {
+          const chip = document.createElement('div');
+          chip.className = `tag-chip ${this.app.currentTagFilter === tag ? 'active' : ''}`;
+          chip.textContent = tag;
+          chip.addEventListener('click', () => {
+            this.app.currentTagFilter = tag;
+            this.renderHome();
+          });
+          this.tagsBar.appendChild(chip);
+        });
+      }
+
+      renderGrid() {
+        const memos = this.app.getHomeMemos();
+        this.memoGrid.innerHTML = '';
+        
+        memos.forEach(memo => {
+          const threadCount = this.app.getThreadCount(memo.id);
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.dataset.id = memo.id;
+          
+          const tagsHtml = memo.tags.length > 0 
+            ? `<div class="card-tags">${this.escapeHTML(memo.tags.join(', '))}</div>` 
+            : `<div></div>`;
+
+          const threadHtml = threadCount > 0 ? `
+            <div class="thread-indicator">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              ${threadCount}
+            </div>
+          ` : '';
+
+          card.innerHTML = `
+            <div class="card-title">${this.escapeHTML(memo.title) || '無題のメモ'}</div>
+            <div class="card-content">${this.escapeHTML(memo.content).replace(/\n/g, '<br>') || 'タップして編集...'}</div>
+            <div class="card-footer">
+              ${tagsHtml}
+              ${threadHtml}
+            </div>
+          `;
+
+          card.addEventListener('click', () => {
+            this.app.currentParentId = memo.id;
+            this.navigate('thread');
+          });
+
+          this.memoGrid.appendChild(card);
+        });
+      }
+
+      initHomeSortable() {
+        if (this.homeSortable) this.homeSortable.destroy();
+        this.homeSortable = new Sortable(this.memoGrid, {
+          animation: 200,
+          delay: 200,
+          delayOnTouchOnly: true,
+          ghostClass: 'sortable-ghost',
+          dragClass: 'sortable-drag',
+          onEnd: async (evt) => {
+            const itemEls = Array.from(this.memoGrid.children);
+            const updates = itemEls.map((el, index) => ({
+              id: el.dataset.id,
+              order: index
+            }));
+            await this.app.db.updateOrders(updates);
+            await this.app.loadData();
+          }
+        });
+      }
+
+      async createNewMemoAndOpen() {
+        const newMemo = this.app.createMemoObject();
+        await this.app.saveMemo(newMemo);
+        this.app.currentParentId = newMemo.id;
+        this.navigate('thread');
+      }
+
+      async createNewThreadMemo() {
+        if (!this.app.currentParentId) return;
+        const childMemo = this.app.createMemoObject(this.app.currentParentId);
+        await this.app.saveMemo(childMemo);
+        this.renderThread();
+        setTimeout(() => {
+          const scrollArea = document.getElementById('thread-scroll-area');
+          scrollArea.scrollTop = scrollArea.scrollHeight;
+        }, 100);
+      }
+
+      renderThread() {
+        const memos = this.app.getThreadMemos(this.app.currentParentId);
+        this.editorList.innerHTML = '';
+
+        memos.forEach((memo, index) => {
+          const isParent = memo.parentId === null;
+          const editorCard = document.createElement('div');
+          editorCard.className = 'editor-card';
+          // 新規作成時（中身が空）以外は最初は閉じて表示する
+          if (memo.title !== '' || memo.content !== '') {
+            editorCard.classList.add('collapsed');
+          }
+          editorCard.dataset.id = memo.id;
+
+          editorCard.innerHTML = `
+            <div class="editor-collapsed-view">
+              <div class="collapsed-preview">
+                <div class="collapsed-title">${this.escapeHTML(memo.title) || (isParent ? 'メインタイトル' : 'スレッドタイトル')}</div>
+                <div class="collapsed-text">${this.escapeHTML(memo.content) || 'テキストなし'}</div>
+              </div>
+            </div>
+
+            <div class="editor-full-view">
+              <div style="display:flex; justify-content:space-between;">
+                <input type="text" class="editor-input editor-title" value="${this.escapeHTML(memo.title)}" placeholder="${isParent ? 'メインタイトル' : 'スレッドタイトル'}">
+                <div class="drag-handle">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                </div>
+              </div>
+              <textarea class="editor-input editor-content" placeholder="テキストを入力...">${this.escapeHTML(memo.content)}</textarea>
+              <input type="text" class="editor-input editor-tags-input" value="${this.escapeHTML(memo.tags.join(' '))} " placeholder="タグをスペース区切りで入力">
+              
+              <div class="editor-actions">
+                <button class="btn-delete" data-id="${memo.id}">削除</button>
+              </div>
+            </div>
+
+            <div class="btn-toggle-view" style="position:absolute; top:12px; right:40px;">
+                <svg class="icon-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition: transform 0.3s;"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          `;
+
+          // 折りたたみ制御
+          const toggleBtn = editorCard.querySelector('.btn-toggle-view');
+          const collapsedView = editorCard.querySelector('.editor-collapsed-view');
+          const chevron = editorCard.querySelector('.icon-chevron');
+          
+          const toggleCollapse = () => {
+            const isCollapsed = editorCard.classList.toggle('collapsed');
+            chevron.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)';
+            if (isCollapsed) {
+              // 閉じるときに最新の入力をプレビューに反映
+              editorCard.querySelector('.collapsed-title').textContent = editorCard.querySelector('.editor-title').value || (isParent ? 'メインタイトル' : 'スレッドタイトル');
+              editorCard.querySelector('.collapsed-text').textContent = editorCard.querySelector('.editor-content').value || 'テキストなし';
+            } else {
+              // 開いたときに高さを再調整
+              setTimeout(autoResize, 0);
             }
-            // 子メモのタグも同期
-            memos.filter(m => m.parentId === currentEditId).forEach(child => {
-                child.tags = [...currentTags];
-            });
-        }
+          };
 
-        async function closeEditor() {
-            saveCurrentState();
-            document.getElementById('editor-overlay').style.display = 'none';
-            tagInput.value = '';
-            await render();
-        }
+          toggleBtn.addEventListener('click', toggleCollapse);
+          collapsedView.addEventListener('click', toggleCollapse);
+          if (!editorCard.classList.contains('collapsed')) chevron.style.transform = 'rotate(180deg)';
 
-        async function createNewMemo() {
-            const newId = Date.now();
-            memos.unshift({ id: newId, title: '', content: '', tags: [], parentId: null });
-            await render();
-            openEditor(newId);
-        }
+          // Auto Resize Textarea
+          const textarea = editorCard.querySelector('.editor-content');
+          const autoResize = () => {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+          };
+          textarea.addEventListener('input', autoResize);
+          setTimeout(autoResize, 0);
 
-        function addReplyBlock() {
-            const newId = Date.now() + Math.floor(Math.random() * 1000);
-            const newReply = { 
-                id: newId, 
-                title: '', 
-                content: '', 
-                tags: [...currentTags], 
-                parentId: currentEditId 
-            };
-            memos.push(newReply);
-            createReplyElement(newReply);
-            
-            // 最後に追加されたカードを編集状態にする
-            const lastCard = threadList.lastElementChild;
-            lastCard.click();
-        }
+          // Auto Save Logic
+          const inputs = editorCard.querySelectorAll('input, textarea');
+          inputs.forEach(input => {
+            input.addEventListener('input', () => this.debouncedSave(editorCard, memo));
+            input.addEventListener('blur', () => this.forceSave(editorCard, memo));
+          });
 
-        async function deleteMemo() {
-            if(confirm('このメモを削除しますか？（スレッド全体が削除されます）')) {
-                memos = memos.filter(m => m.id !== currentEditId && m.parentId !== currentEditId);
-                document.getElementById('editor-overlay').style.display = 'none';
-                await render();
+          // Delete Logic
+          editorCard.querySelector('.btn-delete').addEventListener('click', async () => {
+            if (confirm('このメモを削除しますか？\n（親メモの場合は連なるスレッドも全て削除されます）')) {
+              await this.app.deleteMemoAndThread(memo.id);
+              if (isParent) {
+                this.navigate('home');
+              } else {
+                this.renderThread();
+              }
             }
+          });
+
+          this.editorList.appendChild(editorCard);
+        });
+
+        this.initThreadSortable();
+      }
+
+      initThreadSortable() {
+        if (this.threadSortable) this.threadSortable.destroy();
+        this.threadSortable = new Sortable(this.editorList, {
+          handle: '.drag-handle',
+          animation: 200,
+          ghostClass: 'sortable-ghost',
+          onEnd: async (evt) => {
+            const itemEls = Array.from(this.editorList.children);
+            const updates = itemEls.map((el, index) => ({
+              id: el.dataset.id,
+              order: index
+            }));
+            await this.app.db.updateOrders(updates);
+            await this.app.loadData();
+          }
+        });
+      }
+
+      async forceSave(cardElement, originalMemo) {
+        clearTimeout(this.saveTimeout);
+        const title = cardElement.querySelector('.editor-title').value.trim();
+        const content = cardElement.querySelector('.editor-content').value.trim();
+        const tagsStr = cardElement.querySelector('.editor-tags-input').value.trim();
+        const tags = tagsStr ? tagsStr.split(/\s+/).filter(t => t) : [];
+
+        if (title === originalMemo.title && content === originalMemo.content && JSON.stringify(tags) === JSON.stringify(originalMemo.tags)) {
+          return;
         }
 
-        async function startApp() {
-            await initDB();
-            const storedMemos = await loadMemos();
-            memos = storedMemos.length > 0 ? storedMemos : [];
-            render();
-        }
+        const updatedMemo = { ...originalMemo, title, content, tags };
+        await this.app.saveMemo(updatedMemo);
+      }
 
-        startApp();
-    </script>
+      debouncedSave(cardElement, originalMemo) {
+        clearTimeout(this.saveTimeout);
+        this.saveTimeout = setTimeout(() => {
+          this.forceSave(cardElement, originalMemo);
+        }, 1000);
+      }
+
+      escapeHTML(str) {
+        if (!str) return '';
+        return str.replace(/[&<>'"]/g, tag => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[tag]));
+      }
+    }
+
+    /**
+     * ==========================================================================
+     * 4. Initialization
+     * ==========================================================================
+     */
+    document.addEventListener('DOMContentLoaded', async () => {
+      const db = new MemoDatabase();
+      try {
+        await db.init();
+        const appLogic = new AppLogic(db);
+        await appLogic.loadData();
+        const uiManager = new UIManager(appLogic);
+        uiManager.renderHome();
+      } catch (error) {
+        console.error("アプリの初期化に失敗しました:", error);
+        alert("データベースの初期化に失敗しました。");
+      }
+    });
+  </script>
 </body>
 </html>
