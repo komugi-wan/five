@@ -1,1 +1,688 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="PackingLog">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="manifest" href="manifest.json">
+    
+    <title>My Packing List - OPP管理</title>
+    <style>
+        :root {
+            /* 洗練された大人のピンクパレット */
+            --primary: #e8aeb7;       /* 落ち着いたスモーキーピンク */
+            --primary-dark: #b5838d;  /* アクセント用のローズ */
+            --primary-light: #f4cfdf; /* 柔らかなサクラ */
+            --bg-color: #fdf8f9;      /* ニュアンスホワイト */
+            --card-bg: #ffffff;
+            --text-main: #4a3f3f;     /* 視認性の高いブラウン寄りのグレー */
+            --text-sub: #8e7d7d;      /* 補助テキスト */
+            --danger: #ffb4b4;        /* 警告（ソフトレッド） */
+            --success: #a7c4bc;       /* 成功（セージ） */
+            --accent: #d4b8b8;        /* ベージュピンク */
+            --border-color: #f1e4e6;
+            --shadow: 0 8px 24px rgba(181, 131, 141, 0.08);
+            --radius-lg: 20px;
+            --radius-md: 12px;
+        }
 
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+            letter-spacing: 0.03em;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding-bottom: 120px;
+            line-height: 1.6;
+        }
+
+        .container { max-width: 500px; margin: 0 auto; padding: 16px; }
+        
+        header { padding: 32px 0 20px; text-align: center; }
+        header h1 { 
+            font-size: 1.25rem; 
+            color: var(--primary-dark); 
+            margin: 0; 
+            letter-spacing: 0.3rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        /* Tabs - Glassmorphism style */
+        .tab-container {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(253, 248, 249, 0.85);
+            backdrop-filter: blur(8px);
+            padding: 12px 0 4px;
+        }
+        /* カテゴリータブ用 */
+        .sub-tab-container {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 54px; /* tab-containerの下に配置 */
+            z-index: 49;
+            background: rgba(253, 248, 249, 0.85);
+            backdrop-filter: blur(8px);
+            padding: 4px 0 12px;
+            flex-wrap: wrap;
+        }
+
+        .tab-button {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            color: var(--text-sub);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+        }
+        .tab-button.active {
+            background: var(--primary-dark);
+            color: white;
+            border-color: var(--primary-dark);
+            box-shadow: 0 4px 12px rgba(181, 131, 141, 0.3);
+        }
+
+        /* サブタブ専用の小ぶりなスタイル */
+        .sub-tab-button {
+            padding: 4px 12px;
+            font-size: 0.7rem;
+            border-radius: 8px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-sub);
+            cursor: pointer;
+        }
+        .sub-tab-button.active {
+            color: var(--primary-dark);
+            font-weight: 800;
+            border-bottom: 2px solid var(--primary-dark);
+        }
+
+        /* Card Style - Neumorphic subtle touch */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: transform 0.2s;
+        }
+
+        .item-row {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        .item-thumb {
+            width: 80px;
+            height: 80px;
+            border-radius: var(--radius-md);
+            object-fit: cover;
+            background: #fff0f3;
+            flex-shrink: 0;
+        }
+        .item-info { flex: 1; min-width: 0; }
+        
+        .item-title { 
+            font-weight: 700; 
+            font-size: 1rem; 
+            margin-bottom: 4px;
+            color: var(--text-main);
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+        }
+        .item-size {
+            font-size: 0.9rem;
+            color: var(--primary-dark);
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+        .item-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .badge-use { background: #fff0f3; color: var(--primary-dark); }
+        .badge-shop { color: var(--text-sub); background: #f3eff0; }
+        .badge-category { background: #e8eaed; color: #5f6368; }
+        
+        .status-btn, .btn-chip {
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .status-ok { background: var(--success); color: white; }
+        .status-stock { 
+            background: var(--danger); 
+            color: white; 
+            box-shadow: 0 0 0 0 rgba(229, 152, 155, 0.4);
+            animation: pulse-shadow 2s infinite; 
+        }
+
+        /* チップ形状のボタン */
+        .btn-chip {
+            background: #f3eff0;
+            color: var(--text-sub);
+        }
+        .btn-chip:active {
+            opacity: 0.7;
+            transform: scale(0.95);
+        }
+        .btn-chip-delete {
+            color: #d68a8a;
+            background: #fff0f0;
+        }
+
+        @keyframes pulse-shadow {
+            0% { box-shadow: 0 0 0 0 rgba(255, 180, 180, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 180, 180, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 180, 180, 0); }
+        }
+
+        .price-area {
+            text-align: right;
+            flex-shrink: 0;
+        }
+        .price-main { font-weight: 800; font-size: 1.1rem; color: var(--text-main); }
+        .unit-price-tag { font-size: 0.7rem; color: var(--text-sub); font-weight: 500; }
+
+        .card-footer {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .memo-text {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            font-style: italic;
+        }
+
+        /* Form styling */
+        .form-group { margin-bottom: 18px; }
+        label { display: block; font-size: 0.8rem; color: var(--text-sub); margin-bottom: 6px; font-weight: 600; }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            outline: none;
+            background: #fff;
+            transition: border-color 0.2s;
+            color: var(--text-main);
+            -webkit-appearance: none;
+        }
+        input:focus { border-color: var(--primary); }
+
+        /* カスタムファイルアップロードのデザイン */
+        .file-upload-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        .file-upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: #fff;
+            border: 2px dashed var(--accent);
+            border-radius: var(--radius-md);
+            color: var(--primary-dark);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .file-upload-label:active {
+            background: #fff0f3;
+            transform: scale(0.98);
+        }
+        #field-image {
+            display: none; /* 元のボタンを隠す */
+        }
+
+        .btn { border: none; border-radius: 100px; padding: 14px; font-weight: 700; cursor: pointer; width: 100%; transition: opacity 0.2s; }
+        .btn-primary { background: var(--primary-dark); color: white; box-shadow: 0 4px 12px rgba(181, 131, 141, 0.2); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-text { background: none; color: var(--text-sub); font-size: 0.8rem; text-decoration: none; padding: 8px; }
+
+        /* Bottom Nav */
+        nav.bottom-nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(15px);
+            display: flex;
+            padding: 10px 0 calc(env(safe-area-inset-bottom) + 10px);
+            border-top: 1px solid var(--border-color);
+            z-index: 100;
+        }
+        .nav-item {
+            background: none; border: none; color: var(--accent);
+            flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+            transition: color 0.3s;
+        }
+        .nav-item.active { color: var(--primary-dark); }
+        .nav-icon { font-size: 1.4rem; }
+        .nav-label { font-size: 0.65rem; font-weight: 700; }
+
+        .view-section { display: none; }
+        .view-section.active { display: block; animation: slideUp 0.4s cubic-bezier(0, 0.5, 0.5, 1); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-sub); font-size: 0.9rem; }
+        #image-preview-container { margin-top: 12px; position: relative; width: 100px; height: 100px; }
+        #image-preview { width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius-md); box-shadow: var(--shadow); }
+        .btn-remove-img { position: absolute; top: -8px; right: -8px; background: var(--danger); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Packing Log</h1>
+    </header>
+
+    <section id="view-list" class="view-section active">
+        <div class="tab-container">
+            <button class="tab-button active" onclick="app.setRepeatTab(1)">◎ リピ確定</button>
+            <button class="tab-button" onclick="app.setRepeatTab(0)">○ 普通</button>
+            <button class="tab-button" onclick="app.setRepeatTab(-1)">× 微妙</button>
+        </div>
+        <div class="sub-tab-container">
+            <button class="sub-tab-button active" onclick="app.setCategoryTab('すべて')">すべて</button>
+            <button class="sub-tab-button" onclick="app.setCategoryTab('OPP袋')">OPP袋</button>
+            <button class="sub-tab-button" onclick="app.setCategoryTab('封筒')">封筒</button>
+            <button class="sub-tab-button" onclick="app.setCategoryTab('補強')">補強</button>
+            <button class="sub-tab-button" onclick="app.setCategoryTab('その他')">その他</button>
+        </div>
+        <div id="item-container"></div>
+    </section>
+
+    <section id="view-shopping" class="view-section">
+        <h3 style="font-size:1rem; margin: 0 0 20px 8px; color:var(--primary-dark)">🛒 買い物リスト</h3>
+        <div id="shopping-container"></div>
+    </section>
+
+    <section id="view-form" class="view-section">
+        <div class="card">
+            <h2 id="form-title" style="margin:0 0 24px; font-size:1.1rem; color:var(--primary-dark); text-align:center;">アイテム登録</h2>
+            <form id="item-form">
+                <input type="hidden" id="field-id">
+                <div class="form-group"><label>商品名</label><input type="text" id="field-name" placeholder="例: OPP袋 A4用" required></div>
+                <div class="form-group">
+                    <label>画像</label>
+                    <div class="file-upload-wrapper">
+                        <label for="field-image" class="file-upload-label">
+                            <span id="file-label-text">📷 写真を選択する</span>
+                        </label>
+                        <input type="file" id="field-image" accept="image/*">
+                    </div>
+                    <div id="image-preview-container" style="display:none;">
+                        <img id="image-preview" src=""><button type="button" class="btn-remove-img" onclick="app.removeImageData()">×</button>
+                    </div>
+                    <input type="hidden" id="field-image-data">
+                </div>
+                <div class="form-group">
+                    <label>カテゴリー</label>
+                    <select id="field-category">
+                        <option value="OPP袋">OPP袋</option>
+                        <option value="封筒">封筒</option>
+                        <option value="補強">補強</option>
+                        <option value="その他">その他</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>主な用途</label><input type="text" id="field-usage" placeholder="例: 衣類、カタログ"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group"><label>横幅 (mm)</label><input type="number" id="field-width" inputmode="decimal"></div>
+                    <div class="form-group"><label>縦幅 (mm)</label><input type="number" id="field-height" inputmode="decimal"></div>
+                    <div class="form-group"><label>価格</label><input type="number" id="field-price" value="110" inputmode="decimal"></div>
+                    <div class="form-group"><label>入数</label><input type="number" id="field-count" inputmode="decimal"></div>
+                    <div class="form-group"><label>厚み (mm)</label><input type="text" id="field-thickness" placeholder="0.03" inputmode="decimal"></div>
+                    <div class="form-group"><label>ショップ</label><input type="text" id="field-shop" placeholder="例: ダイソー"></div>
+                </div>
+                <div class="form-group"><label>メモ / JANコード</label><textarea id="field-memo" rows="2"></textarea></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
+                    <div class="form-group"><label>評価</label><select id="field-repeat"><option value="1">◎ リピ確定</option><option value="0">○ 普通</option><option value="-1">× 微妙</option></select></div>
+                    <div class="form-group"><label>在庫</label><select id="field-stock"><option value="1">在庫あり</option><option value="0">不足中</option></select></div>
+                </div>
+                <button type="submit" class="btn btn-primary">保存する</button>
+                <div style="text-align:center; margin-top:10px;">
+                    <button type="button" class="btn btn-text" onclick="app.showView('list')">キャンセル</button>
+                </div>
+            </form>
+        </div>
+    </section>
+</div>
+
+<nav class="bottom-nav">
+    <button class="nav-item active" onclick="app.showView('list')">
+        <span class="nav-icon">📋</span><span class="nav-label">一覧</span>
+    </button>
+    <button class="nav-item" onclick="app.showView('shopping')">
+        <span class="nav-icon">🛒</span><span class="nav-label">買い物</span>
+    </button>
+    <button class="nav-item" onclick="app.showView('form')">
+        <span class="nav-icon">➕</span><span class="nav-label">追加</span>
+    </button>
+</nav>
+
+<script>
+class Storage {
+    constructor() { this.dbName = 'PackingAppDB'; this.version = 1; this.db = null; }
+    async init() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, this.version);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('items')) {
+                    db.createObjectStore('items', { keyPath: 'id', autoIncrement: true });
+                }
+            };
+            request.onsuccess = (e) => { this.db = e.target.result; resolve(); };
+            request.onerror = (e) => reject(e);
+        });
+    }
+    async getAll() {
+        return new Promise((resolve) => {
+            const transaction = this.db.transaction(['items'], 'readonly');
+            const store = transaction.objectStore('items');
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result);
+        });
+    }
+    async save(item) {
+        return new Promise((resolve) => {
+            const transaction = this.db.transaction(['items'], 'readwrite');
+            const store = transaction.objectStore('items');
+            const request = item.id ? store.put(item) : store.add(item);
+            request.onsuccess = () => resolve();
+        });
+    }
+    async delete(id) {
+        return new Promise((resolve) => {
+            const transaction = this.db.transaction(['items'], 'readwrite');
+            const store = transaction.objectStore('items');
+            const request = store.delete(id);
+            request.onsuccess = () => resolve();
+        });
+    }
+}
+
+const app = {
+    db: new Storage(),
+    currentView: 'list',
+    currentRepeatTab: 1,
+    currentCategoryTab: 'すべて',
+
+    async init() {
+        await this.db.init();
+        this.render();
+        this.setupEventListeners();
+        this.registerServiceWorker(); // SW登録追加
+    },
+
+    registerServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registered'))
+                    .catch(err => console.log('SW error', err));
+            });
+        }
+    },
+
+    setupEventListeners() {
+        document.getElementById('item-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.handleSave();
+        });
+
+        document.getElementById('field-image').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // ラベルのテキストを選択したファイル名に変更（視覚的なフィードバック）
+            document.getElementById('file-label-text').innerText = '✅ 画像を選択済み';
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width, height = img.height;
+                    const maxSide = 600;
+                    if (width > height) { if (width > maxSide) { height *= maxSide / width; width = maxSide; } }
+                    else { if (height > maxSide) { width *= maxSide / height; height = maxSide; } }
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const compressedData = canvas.toDataURL('image/jpeg', 0.7);
+                    this.setImagePreview(compressedData);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    },
+
+    setImagePreview(data) {
+        const preview = document.getElementById('image-preview');
+        const container = document.getElementById('image-preview-container');
+        const hiddenInput = document.getElementById('field-image-data');
+        const labelText = document.getElementById('file-label-text');
+
+        if (data) {
+            preview.src = data; container.style.display = 'block'; hiddenInput.value = data;
+            labelText.innerText = '✅ 画像を変更する';
+        } else {
+            preview.src = ''; container.style.display = 'none'; hiddenInput.value = '';
+            document.getElementById('field-image').value = '';
+            labelText.innerText = '📷 写真を選択する';
+        }
+    },
+
+    removeImageData() { this.setImagePreview(null); },
+
+    async handleSave() {
+        const item = {
+            name: document.getElementById('field-name').value,
+            category: document.getElementById('field-category').value,
+            usage: document.getElementById('field-usage').value,
+            width: document.getElementById('field-width').value,
+            height: document.getElementById('field-height').value,
+            price: document.getElementById('field-price').value,
+            count: document.getElementById('field-count').value,
+            thickness: document.getElementById('field-thickness').value,
+            shop: document.getElementById('field-shop').value,
+            memo: document.getElementById('field-memo').value,
+            repeat: parseInt(document.getElementById('field-repeat').value),
+            stock: parseInt(document.getElementById('field-stock').value),
+            imageData: document.getElementById('field-image-data').value
+        };
+        const id = document.getElementById('field-id').value;
+        if (id) item.id = parseInt(id);
+        await this.db.save(item);
+        this.showView('list');
+    },
+
+    async toggleStock(itemJson) {
+        const item = JSON.parse(decodeURIComponent(itemJson));
+        item.stock = item.stock === 1 ? 0 : 1;
+        await this.db.save(item);
+        this.render();
+    },
+
+    async deleteItem(id) {
+        if (confirm('削除しますか？')) { await this.db.delete(id); this.render(); }
+    },
+
+    editItem(itemJson) {
+        const item = JSON.parse(decodeURIComponent(itemJson));
+        document.getElementById('form-title').innerText = '編集';
+        document.getElementById('field-id').value = item.id;
+        document.getElementById('field-name').value = item.name || '';
+        document.getElementById('field-category').value = item.category || 'OPP袋';
+        document.getElementById('field-usage').value = item.usage || '';
+        document.getElementById('field-width').value = item.width || '';
+        document.getElementById('field-height').value = item.height || '';
+        document.getElementById('field-price').value = item.price || '';
+        document.getElementById('field-count').value = item.count || '';
+        document.getElementById('field-thickness').value = item.thickness || '';
+        document.getElementById('field-shop').value = item.shop || '';
+        document.getElementById('field-memo').value = item.memo || '';
+        document.getElementById('field-repeat').value = item.repeat || 0;
+        document.getElementById('field-stock').value = item.stock || 1;
+        this.setImagePreview(item.imageData || null);
+        this.showView('form', true);
+    },
+
+    setRepeatTab(val) {
+        this.currentRepeatTab = val;
+        document.querySelectorAll('.tab-button').forEach(tab => {
+            const isMatch = (val === 1 && tab.innerText.includes('リピ')) ||
+                            (val === 0 && tab.innerText.includes('普通')) ||
+                            (val === -1 && tab.innerText.includes('微妙'));
+            tab.classList.toggle('active', isMatch);
+        });
+        this.render();
+    },
+
+    setCategoryTab(cat) {
+        this.currentCategoryTab = cat;
+        document.querySelectorAll('.sub-tab-button').forEach(tab => {
+            tab.classList.toggle('active', tab.innerText === cat);
+        });
+        this.render();
+    },
+
+    showView(viewName, isEdit = false) {
+        this.currentView = viewName;
+        document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+        document.getElementById(`view-${viewName}`).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach((nav, idx) => {
+            nav.classList.toggle('active', (viewName === 'list' && idx === 0) || (viewName === 'shopping' && idx === 1) || (viewName === 'form' && idx === 2));
+        });
+        if (viewName === 'form' && !isEdit) {
+            document.getElementById('form-title').innerText = 'アイテム登録';
+            document.getElementById('item-form').reset();
+            document.getElementById('field-id').value = '';
+            document.getElementById('field-category').value = 'OPP袋';
+            // デフォルト価格を再設定（resetで消えるため）
+            document.getElementById('field-price').value = '110';
+            this.setImagePreview(null);
+        }
+        this.render();
+        window.scrollTo(0, 0);
+    },
+
+    async render() {
+        const items = await this.db.getAll();
+        const container = document.getElementById('item-container');
+        
+        // フィルタリング処理（評価かつカテゴリー）
+        const filteredItems = items.filter(i => {
+            const matchRepeat = (i.repeat === this.currentRepeatTab || (this.currentRepeatTab === 0 && i.repeat === undefined));
+            const matchCategory = (this.currentCategoryTab === 'すべて' || i.category === this.currentCategoryTab);
+            return matchRepeat && matchCategory;
+        });
+        
+        container.innerHTML = filteredItems.length ? '' : '<div class="empty-state">該当するアイテムがありません</div>';
+        
+        const shoppingContainer = document.getElementById('shopping-container');
+        const outOfStockItems = items.filter(i => i.stock === 0);
+        shoppingContainer.innerHTML = outOfStockItems.length ? '' : '<div class="empty-state">買い物リストは空です 🌿</div>';
+
+        filteredItems.forEach(item => container.appendChild(this.createItemCard(item)));
+        outOfStockItems.forEach(item => shoppingContainer.appendChild(this.createItemCard(item)));
+    },
+
+    createItemCard(item) {
+        const div = document.createElement('div');
+        div.className = 'card';
+        const itemJson = encodeURIComponent(JSON.stringify(item));
+        const unitPrice = (item.price && item.count > 0) ? (item.price / item.count).toFixed(1) : null;
+
+        div.innerHTML = `
+            <div class="item-row">
+                ${item.imageData ? `<img src="${item.imageData}" class="item-thumb">` : `<div class="item-thumb" style="display:flex;align-items:center;justify-content:center;color:#dec9ca;font-size:2rem;background:#fff0f3">📦</div>`}
+                <div class="item-info">
+                    <div class="item-title">${item.name}</div>
+                    <div class="item-size">${item.width || '?'}<small>x</small>${item.height || '?'} <small>mm</small></div>
+                    <div class="item-meta">
+                        <span class="badge badge-category">${item.category || '未設定'}</span>
+                        ${item.usage ? `<span class="badge badge-use">${item.usage}</span>` : ''}
+                        <span class="badge badge-shop">${item.shop || '不明'}</span>
+                    </div>
+                </div>
+                <div class="price-area">
+                    <div class="price-main">¥${item.price || 0}</div>
+                    <div class="unit-price-tag">${item.count || 0}枚入</div>
+                    ${unitPrice ? `<div class="unit-price-tag">¥${unitPrice}/枚</div>` : ''}
+                </div>
+            </div>
+            
+            <div class="card-footer">
+                <div class="memo-text">${item.memo ? item.memo : (item.thickness ? '厚さ:'+item.thickness+'mm' : '')}</div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button class="status-btn ${item.stock == 0 ? 'status-stock' : 'status-ok'}" onclick="app.toggleStock('${itemJson}')">
+                        ${item.stock == 0 ? '買う' : '在庫あり'}
+                    </button>
+                    <button class="btn-chip" onclick="app.editItem('${itemJson}')">編集</button>
+                    <button class="btn-chip btn-chip-delete" onclick="app.deleteItem(${item.id})">削除</button>
+                </div>
+            </div>
+        `;
+        return div;
+    }
+};
+
+app.init();
+</script>
+</body>
+</html>
