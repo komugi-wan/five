@@ -179,6 +179,14 @@
         .badge-shop { color: var(--text-sub); background: #f3eff0; }
         .badge-category { background: #e8eaed; color: #5f6368; }
         
+        .status-ok { background: var(--success); color: white; }
+        .status-stock { 
+            background: var(--danger); 
+            color: white; 
+            box-shadow: 0 0 0 0 rgba(229, 152, 155, 0.4);
+            animation: pulse-shadow 2s infinite; 
+        }
+
         .status-btn, .btn-chip {
             padding: 6px 14px;
             border-radius: 100px;
@@ -191,13 +199,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-        .status-ok { background: var(--success); color: white; }
-        .status-stock { 
-            background: var(--danger); 
-            color: white; 
-            box-shadow: 0 0 0 0 rgba(229, 152, 155, 0.4);
-            animation: pulse-shadow 2s infinite; 
         }
 
         /* チップ形状のボタン */
@@ -239,6 +240,50 @@
             font-size: 0.75rem;
             color: var(--text-sub);
             font-style: italic;
+        }
+
+        /* Shipping Table Style */
+        .shipping-group-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 20px 16px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .shipping-group-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--primary-dark);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .shipping-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+        .shipping-table th {
+            text-align: left;
+            color: var(--text-sub);
+            font-weight: 600;
+            padding: 8px 4px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .shipping-table td {
+            padding: 10px 4px;
+            border-bottom: 1px solid #fcf2f4;
+            vertical-align: middle;
+        }
+        .shipping-table tr:last-child td {
+            border-bottom: none;
+        }
+        .shipping-cost-cell {
+            font-weight: 800;
+            color: var(--text-main);
+            white-space: nowrap;
         }
 
         /* Form styling */
@@ -291,6 +336,28 @@
         .btn-primary:active { transform: scale(0.98); }
         .btn-text { background: none; color: var(--text-sub); font-size: 0.8rem; text-decoration: none; padding: 8px; }
 
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: var(--primary-dark);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 16px rgba(181, 131, 141, 0.4);
+            border: none;
+            cursor: pointer;
+            z-index: 90;
+            transition: transform 0.2s;
+        }
+        .fab:active { transform: scale(0.9); }
+
         /* Bottom Nav */
         nav.bottom-nav {
             position: fixed;
@@ -342,11 +409,17 @@
             <button class="sub-tab-button" onclick="app.setCategoryTab('その他')">その他</button>
         </div>
         <div id="item-container"></div>
+        <button class="fab" onclick="app.showView('form')">＋</button>
     </section>
 
     <section id="view-shopping" class="view-section">
         <h3 style="font-size:1rem; margin: 0 0 20px 8px; color:var(--primary-dark)">🛒 買い物リスト</h3>
         <div id="shopping-container"></div>
+    </section>
+
+    <section id="view-shipping" class="view-section">
+        <h3 style="font-size:1rem; margin: 0 0 20px 8px; color:var(--primary-dark)">🚚 送料一覧</h3>
+        <div id="shipping-list-container"></div>
     </section>
 
     <section id="view-form" class="view-section">
@@ -398,23 +471,43 @@
             </form>
         </div>
     </section>
+
+    <section id="view-shipping-form" class="view-section">
+        <div class="card">
+            <h2 id="shipping-form-title" style="margin:0 0 24px; font-size:1.1rem; color:var(--primary-dark); text-align:center;">送料登録</h2>
+            <form id="shipping-form">
+                <input type="hidden" id="ship-id">
+                <div class="form-group"><label>配送名称</label><input type="text" id="ship-name" placeholder="例: 定形外郵便、ネコポス" required></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group"><label>サイズ (3辺計/cm)</label><input type="number" id="ship-size" placeholder="60"></div>
+                    <div class="form-group"><label>重さ (g以内)</label><input type="number" id="ship-weight" placeholder="1000"></div>
+                </div>
+                <div class="form-group"><label>金額 (円)</label><input type="number" id="ship-cost" placeholder="210" required></div>
+                <div class="form-group"><label>備考</label><textarea id="ship-memo" rows="2" placeholder="厚さ3cm以内など"></textarea></div>
+                <button type="submit" class="btn btn-primary">送料を保存する</button>
+                <div style="text-align:center; margin-top:10px;">
+                    <button type="button" class="btn btn-text" onclick="app.showView('shipping')">キャンセル</button>
+                </div>
+            </form>
+        </div>
+    </section>
 </div>
 
 <nav class="bottom-nav">
     <button class="nav-item active" onclick="app.showView('list')">
         <span class="nav-icon">📋</span><span class="nav-label">一覧</span>
     </button>
+    <button class="nav-item" onclick="app.showView('shipping')">
+        <span class="nav-icon">🚚</span><span class="nav-label">送料</span>
+    </button>
     <button class="nav-item" onclick="app.showView('shopping')">
         <span class="nav-icon">🛒</span><span class="nav-label">買い物</span>
-    </button>
-    <button class="nav-item" onclick="app.showView('form')">
-        <span class="nav-icon">➕</span><span class="nav-label">追加</span>
     </button>
 </nav>
 
 <script>
 class Storage {
-    constructor() { this.dbName = 'PackingAppDB'; this.version = 1; this.db = null; }
+    constructor() { this.dbName = 'PackingAppDB'; this.version = 2; this.db = null; }
     async init() {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(this.dbName, this.version);
@@ -423,31 +516,34 @@ class Storage {
                 if (!db.objectStoreNames.contains('items')) {
                     db.createObjectStore('items', { keyPath: 'id', autoIncrement: true });
                 }
+                if (!db.objectStoreNames.contains('shipping')) {
+                    db.createObjectStore('shipping', { keyPath: 'id', autoIncrement: true });
+                }
             };
             request.onsuccess = (e) => { this.db = e.target.result; resolve(); };
             request.onerror = (e) => reject(e);
         });
     }
-    async getAll() {
+    async getAll(storeName = 'items') {
         return new Promise((resolve) => {
-            const transaction = this.db.transaction(['items'], 'readonly');
-            const store = transaction.objectStore('items');
+            const transaction = this.db.transaction([storeName], 'readonly');
+            const store = transaction.objectStore(storeName);
             const request = store.getAll();
             request.onsuccess = () => resolve(request.result);
         });
     }
-    async save(item) {
+    async save(item, storeName = 'items') {
         return new Promise((resolve) => {
-            const transaction = this.db.transaction(['items'], 'readwrite');
-            const store = transaction.objectStore('items');
+            const transaction = this.db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
             const request = item.id ? store.put(item) : store.add(item);
             request.onsuccess = () => resolve();
         });
     }
-    async delete(id) {
+    async delete(id, storeName = 'items') {
         return new Promise((resolve) => {
-            const transaction = this.db.transaction(['items'], 'readwrite');
-            const store = transaction.objectStore('items');
+            const transaction = this.db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
             const request = store.delete(id);
             request.onsuccess = () => resolve();
         });
@@ -464,7 +560,7 @@ const app = {
         await this.db.init();
         this.render();
         this.setupEventListeners();
-        this.registerServiceWorker(); // SW登録追加
+        this.registerServiceWorker();
     },
 
     registerServiceWorker() {
@@ -483,11 +579,15 @@ const app = {
             await this.handleSave();
         });
 
+        document.getElementById('shipping-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.handleSaveShipping();
+        });
+
         document.getElementById('field-image').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            // ラベルのテキストを選択したファイル名に変更（視覚的なフィードバック）
             document.getElementById('file-label-text').innerText = '✅ 画像を選択済み';
 
             const reader = new FileReader();
@@ -551,6 +651,20 @@ const app = {
         this.showView('list');
     },
 
+    async handleSaveShipping() {
+        const ship = {
+            name: document.getElementById('ship-name').value,
+            size: document.getElementById('ship-size').value,
+            weight: document.getElementById('ship-weight').value,
+            cost: document.getElementById('ship-cost').value,
+            memo: document.getElementById('ship-memo').value
+        };
+        const id = document.getElementById('ship-id').value;
+        if (id) ship.id = parseInt(id);
+        await this.db.save(ship, 'shipping');
+        this.showView('shipping');
+    },
+
     async toggleStock(itemJson) {
         const item = JSON.parse(decodeURIComponent(itemJson));
         item.stock = item.stock === 1 ? 0 : 1;
@@ -560,6 +674,10 @@ const app = {
 
     async deleteItem(id) {
         if (confirm('削除しますか？')) { await this.db.delete(id); this.render(); }
+    },
+
+    async deleteShipping(id) {
+        if (confirm('この送料設定を削除しますか？')) { await this.db.delete(id, 'shipping'); this.render(); }
     },
 
     editItem(itemJson) {
@@ -580,6 +698,18 @@ const app = {
         document.getElementById('field-stock').value = item.stock || 1;
         this.setImagePreview(item.imageData || null);
         this.showView('form', true);
+    },
+
+    editShipping(shipJson) {
+        const ship = JSON.parse(decodeURIComponent(shipJson));
+        document.getElementById('shipping-form-title').innerText = '送料編集';
+        document.getElementById('ship-id').value = ship.id;
+        document.getElementById('ship-name').value = ship.name || '';
+        document.getElementById('ship-size').value = ship.size || '';
+        document.getElementById('ship-weight').value = ship.weight || '';
+        document.getElementById('ship-cost').value = ship.cost || '';
+        document.getElementById('ship-memo').value = ship.memo || '';
+        this.showView('shipping-form', true);
     },
 
     setRepeatTab(val) {
@@ -604,42 +734,74 @@ const app = {
     showView(viewName, isEdit = false) {
         this.currentView = viewName;
         document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
-        document.getElementById(`view-${viewName}`).classList.add('active');
+        const targetView = document.getElementById(`view-${viewName}`);
+        if(targetView) targetView.classList.add('active');
+        
         document.querySelectorAll('.nav-item').forEach((nav, idx) => {
-            nav.classList.toggle('active', (viewName === 'list' && idx === 0) || (viewName === 'shopping' && idx === 1) || (viewName === 'form' && idx === 2));
+            const isActive = (viewName === 'list' && idx === 0) || 
+                             (viewName === 'shipping' && idx === 1) || 
+                             (viewName === 'shopping' && idx === 2);
+            nav.classList.toggle('active', isActive);
         });
+
         if (viewName === 'form' && !isEdit) {
             document.getElementById('form-title').innerText = 'アイテム登録';
             document.getElementById('item-form').reset();
             document.getElementById('field-id').value = '';
             document.getElementById('field-category').value = 'OPP袋';
-            // デフォルト価格を再設定（resetで消えるため）
             document.getElementById('field-price').value = '110';
             this.setImagePreview(null);
         }
+
+        if (viewName === 'shipping-form' && !isEdit) {
+            document.getElementById('shipping-form-title').innerText = '送料登録';
+            document.getElementById('shipping-form').reset();
+            document.getElementById('ship-id').value = '';
+        }
+
         this.render();
         window.scrollTo(0, 0);
     },
 
     async render() {
-        const items = await this.db.getAll();
+        // アイテム描画
+        const items = await this.db.getAll('items');
         const container = document.getElementById('item-container');
-        
-        // フィルタリング処理（評価かつカテゴリー）
         const filteredItems = items.filter(i => {
             const matchRepeat = (i.repeat === this.currentRepeatTab || (this.currentRepeatTab === 0 && i.repeat === undefined));
             const matchCategory = (this.currentCategoryTab === 'すべて' || i.category === this.currentCategoryTab);
             return matchRepeat && matchCategory;
         });
-        
         container.innerHTML = filteredItems.length ? '' : '<div class="empty-state">該当するアイテムがありません</div>';
-        
+        filteredItems.forEach(item => container.appendChild(this.createItemCard(item)));
+
+        // 買い物リスト描画
         const shoppingContainer = document.getElementById('shopping-container');
         const outOfStockItems = items.filter(i => i.stock === 0);
         shoppingContainer.innerHTML = outOfStockItems.length ? '' : '<div class="empty-state">買い物リストは空です 🌿</div>';
-
-        filteredItems.forEach(item => container.appendChild(this.createItemCard(item)));
         outOfStockItems.forEach(item => shoppingContainer.appendChild(this.createItemCard(item)));
+
+        // 送料一覧描画（グループ化表示）
+        const shippingList = await this.db.getAll('shipping');
+        const shippingContainer = document.getElementById('shipping-list-container');
+        shippingContainer.innerHTML = '<div style="margin-bottom:16px"><button class="btn btn-primary" style="padding:10px; font-size:0.8rem;" onclick="app.showView(\'shipping-form\')">+ 送料設定を追加</button></div>';
+        
+        if (shippingList.length === 0) {
+            shippingContainer.innerHTML += '<div class="empty-state">送料設定が登録されていません</div>';
+        } else {
+            // 名前ごとにグループ化
+            const groups = shippingList.reduce((acc, curr) => {
+                if (!acc[curr.name]) acc[curr.name] = [];
+                acc[curr.name].push(curr);
+                return acc;
+            }, {});
+
+            // 各グループを描画
+            Object.keys(groups).sort().forEach(name => {
+                const groupItems = groups[name].sort((a, b) => a.cost - b.cost);
+                shippingContainer.appendChild(this.createShippingGroupCard(name, groupItems));
+            });
+        }
     },
 
     createItemCard(item) {
@@ -677,6 +839,48 @@ const app = {
                     <button class="btn-chip btn-chip-delete" onclick="app.deleteItem(${item.id})">削除</button>
                 </div>
             </div>
+        `;
+        return div;
+    },
+
+    createShippingGroupCard(name, items) {
+        const div = document.createElement('div');
+        div.className = 'shipping-group-card';
+        
+        let rowsHtml = '';
+        items.forEach(ship => {
+            const shipJson = encodeURIComponent(JSON.stringify(ship));
+            rowsHtml += `
+                <tr>
+                    <td>
+                        <div style="font-weight:700;">${ship.size ? ship.size+'cm' : '-'}</div>
+                        <div style="font-size:0.65rem; color:var(--text-sub)">${ship.weight ? ship.weight+'g' : ''}</div>
+                    </td>
+                    <td class="shipping-cost-cell">¥${ship.cost}</td>
+                    <td style="font-size:0.7rem; color:var(--text-sub)">${ship.memo || ''}</td>
+                    <td style="text-align:right; white-space:nowrap;">
+                        <button class="btn-chip" style="padding:4px 8px; height:24px; display:inline-flex;" onclick="app.editShipping('${shipJson}')">編集</button>
+                        <button class="btn-chip btn-chip-delete" style="padding:4px 8px; height:24px; display:inline-flex;" onclick="app.deleteShipping(${ship.id})">×</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        div.innerHTML = `
+            <div class="shipping-group-title">🚛 ${name}</div>
+            <table class="shipping-table">
+                <thead>
+                    <tr>
+                        <th style="width:20%">サイズ</th>
+                        <th style="width:20%">料金</th>
+                        <th>備考</th>
+                        <th style="width:10%"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rowsHtml}
+                </tbody>
+            </table>
         `;
         return div;
     }
